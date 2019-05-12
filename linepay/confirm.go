@@ -10,8 +10,8 @@ import (
 // 加盟店が決済を最終的に完了させるための API です。加盟店で決済 confirm API を呼び出すことによって、
 // 実際の決済が完了し ます。決済 reserve 時に“capture”パラメータが“false”の場合、confirm API 実行時はオーソリ状態になるため、
 // 「capture API」実行時に決済完了となります。
-func (c *Client) Confirm(ctx context.Context, transactionID string, req *ConfirmRequest) (*ConfirmResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v2/payments/%s/confirm", transactionID)
+func (c *Client) Confirm(ctx context.Context, transactionID int64, req *ConfirmRequest) (*ConfirmResponse, *http.Response, error) {
+	endpoint := fmt.Sprintf("v2/payments/%d/confirm", transactionID)
 	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
 	if err != nil {
 		return nil, nil, err
@@ -38,8 +38,11 @@ type ConfirmResponse struct {
 		OrderID       string `json:"orderId"`
 		TransactionID int64  `json:"transactionId"`
 		PayInfo       []struct {
-			Method string `json:"method"`
-			Amount int    `json:"amount"`
+			Method             string `json:"method"`
+			Amount             int    `json:"amount"`
+			CreditCardNickname string `json:"creditCardNickname,omitempty"`
+			CreditCardBrand    string `json:"creditCardBrand,omitempty"`
 		} `json:"payInfo"`
+		RegKey string `json:"regKey,omitempty"`
 	} `json:"info"`
 }
