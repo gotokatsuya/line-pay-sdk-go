@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
@@ -75,7 +74,7 @@ func main() {
 		http.Redirect(w, r, reserveResp.Info.PaymentURL.Web, http.StatusFound)
 	})
 	http.HandleFunc("/pay/confirm", func(w http.ResponseWriter, r *http.Request) {
-		transactionID, err := strconv.ParseInt(r.URL.Query().Get("transactionId"), 10, 64)
+		transactionID, err := linepay.ParseInt64(r.URL.Query().Get("transactionId"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -2,6 +2,7 @@ package linepay
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -11,9 +12,6 @@ import (
 func TestClient_Reserve(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
-	mux.HandleFunc("/v2/payments/request", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"returnCode":"0000"}`)
-	})
 
 	req := &ReserveRequest{
 		ProductName: "100yen",
@@ -22,6 +20,19 @@ func TestClient_Reserve(t *testing.T) {
 		ConfirmURL:  "http://localhost:5000/pay/confirm",
 		OrderID:     "test-order",
 	}
+
+	mux.HandleFunc("/v2/payments/request", func(w http.ResponseWriter, r *http.Request) {
+		v := new(ReserveRequest)
+		json.NewDecoder(r.Body).Decode(v)
+		if got := r.Method; got != http.MethodPost {
+			t.Errorf("Request method: %v, want %v", got, http.MethodPost)
+		}
+		if !reflect.DeepEqual(v, req) {
+			t.Errorf("Request body = %+v, want %+v", v, req)
+		}
+		fmt.Fprint(w, `{"returnCode":"0000"}`)
+	})
+
 	resp, _, err := client.Reserve(context.Background(), req)
 	if err != nil {
 		t.Errorf("Reserve returned error: %v", err)

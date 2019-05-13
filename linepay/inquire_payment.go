@@ -27,7 +27,7 @@ func (c *Client) InquirePayment(ctx context.Context, req *InquirePaymentRequest)
 
 // InquirePaymentRequest type
 type InquirePaymentRequest struct {
-	TransactionID string `url:"transactionId,omitempty"`
+	TransactionID int64  `url:"transactionId,omitempty"`
 	OrderID       string `url:"orderId,omitempty"`
 }
 

@@ -28,7 +28,7 @@ func (c *Client) InquireAuthorization(ctx context.Context, req *InquireAuthoriza
 
 // InquireAuthorizationRequest type
 type InquireAuthorizationRequest struct {
-	TransactionID string `url:"transactionId,omitempty"`
+	TransactionID int64  `url:"transactionId,omitempty"`
 	OrderID       string `url:"orderId,omitempty"`
 }
 
