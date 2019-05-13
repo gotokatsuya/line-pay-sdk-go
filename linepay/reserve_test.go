@@ -10,14 +10,14 @@ import (
 )
 
 func TestClient_Reserve(t *testing.T) {
-	client, mux, _, teardown := setup()
+	client, mux, serverURL, teardown := setup()
 	defer teardown()
 
 	req := &ReserveRequest{
 		ProductName: "100yen",
 		Amount:      100,
 		Currency:    "JPY",
-		ConfirmURL:  "http://localhost:5000/pay/confirm",
+		ConfirmURL:  serverURL + "/web/pay/confirm",
 		OrderID:     "test-order",
 	}
 
