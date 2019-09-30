@@ -7,10 +7,10 @@ import (
 )
 
 // Capture method
-// 決済 reserve API を呼び出す時に“capture”パラメータを“false”で指定した場合は、売上処理を行ったうえで決済を完了させることができます。
-// 決済 confirm API から 30 日以内に売上を確定させてください。期限を過ぎるとキャンセルとなります。
+// Request APIを使って決済をリクエストする際に"options.payment.capture"をfalseに設定した場合、Confirm APIで決済を完了させると決済ステータスは売上確定待ち状態になります。
+// 決済を完全に確定するためには、Capture APIを呼び出して売上確定を行う必要があります。
 func (c *Client) Capture(ctx context.Context, transactionID int64, req *CaptureRequest) (*CaptureResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v2/payments/authorizations/%d/capture", transactionID)
+	endpoint := fmt.Sprintf("v3/payments/authorizations/%d/capture", transactionID)
 	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
 	if err != nil {
 		return nil, nil, err

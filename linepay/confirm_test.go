@@ -18,7 +18,7 @@ func TestClient_Confirm(t *testing.T) {
 		Currency: "JPY",
 	}
 
-	mux.HandleFunc("/v2/payments/20190513000000/confirm", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v3/payments/20190513000000/confirm", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ConfirmRequest)
 		json.NewDecoder(r.Body).Decode(v)
 		if got := r.Method; got != http.MethodPost {

@@ -23,7 +23,6 @@ var (
 type PaymentTransactionSession struct {
 	TransactionID int64  `json:"transactionId"`
 	OrderID       string `json:"orderId"`
-	ProductName   string `json:"productName"`
 	Amount        int    `json:"amount"`
 	Currency      string `json:"currency"`
 }
@@ -41,20 +40,41 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/pay/reserve", func(w http.ResponseWriter, r *http.Request) {
-		reserveReq := &linepay.ReserveRequest{
-			ProductName: "basic demo product",
-			Amount:      1,
-			Currency:    "JPY",
-			ConfirmURL:  os.Getenv("LINE_PAY_CONFIRM_URL"),
-			OrderID:     uuid.New().String(),
+	http.HandleFunc("/pay/request", func(w http.ResponseWriter, r *http.Request) {
+		requestReq := &linepay.RequestRequest{
+			Amount:   250,
+			Currency: "JPY",
+			OrderID:  uuid.New().String(),
+			Packages: []*linepay.RequestPackage{
+				&linepay.RequestPackage{
+					ID:     "1",
+					Amount: 250,
+					Name:   "PACKAGE_SHOP_1",
+					Products: []*linepay.RequestPackageProduct{
+						&linepay.RequestPackageProduct{
+							ID:       "PEN-B-001",
+							Name:     "Pen Brown",
+							Quantity: 1,
+							Price:    250,
+						},
+					},
+				},
+			},
+			RedirectURLs: &linepay.RequestRedirectURLs{
+				ConfirmURL: os.Getenv("LINE_PAY_CONFIRM_URL"),
+				CancelURL:  os.Getenv("LINE_PAY_CANCEL_URL"),
+			},
 		}
-		reserveResp, _, err := pay.Reserve(context.Background(), reserveReq)
+		requestResp, _, err := pay.Request(context.Background(), requestReq)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		transactionID := reserveResp.Info.TransactionID
+		if requestResp.ReturnCode != "0000" {
+			http.Error(w, requestResp.ReturnMessage, http.StatusInternalServerError)
+			return
+		}
+		transactionID := requestResp.Info.TransactionID
 		session, err := store.Get(r, "payment-transaction")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,17 +82,17 @@ func main() {
 		}
 		session.Values[transactionID] = &PaymentTransactionSession{
 			TransactionID: transactionID,
-			OrderID:       reserveReq.OrderID,
-			ProductName:   reserveReq.ProductName,
-			Amount:        reserveReq.Amount,
-			Currency:      reserveReq.Currency,
+			OrderID:       requestReq.OrderID,
+			Amount:        requestReq.Amount,
+			Currency:      requestReq.Currency,
 		}
 		if err := session.Save(r, w); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, reserveResp.Info.PaymentURL.Web, http.StatusFound)
+		http.Redirect(w, r, requestResp.Info.PaymentURL.Web, http.StatusFound)
 	})
+
 	http.HandleFunc("/pay/confirm", func(w http.ResponseWriter, r *http.Request) {
 		transactionID, err := linepay.ParseInt64(r.URL.Query().Get("transactionId"))
 		if err != nil {
@@ -99,11 +119,15 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		if confirmResp.ReturnCode != "0000" {
+			http.Error(w, confirmResp.ReturnMessage, http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(confirmResp)
 	})
-	fmt.Println("open http://localhost:8080/pay/reserve")
+	fmt.Println("open http://localhost:8080/pay/request")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}

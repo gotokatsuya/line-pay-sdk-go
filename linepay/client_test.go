@@ -73,8 +73,15 @@ func TestNewWithOptions(t *testing.T) {
 }
 
 func Test_mergeQuery(t *testing.T) {
+	id := "testid"
+	secret := "testsecret"
+	client, err := New(id, secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	inURL, outURL := "foo", "foo?p=q"
-	u, err := mergeQuery(inURL, &struct {
+	u, err := client.mergeQuery(inURL, &struct {
 		P string `url:"p"`
 	}{"q"})
 	if err != nil {

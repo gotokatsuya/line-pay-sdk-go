@@ -1,6 +1,6 @@
 # line-pay-sdk-go
 
-line-pay-sdk-go is a Go client library for accessing the [LINE Pay API](https://pay.line.me/jp/developers/documentation/download/tech).
+line-pay-sdk-go is a Go client library for accessing the [LINE Pay API](https://pay.line.me/jp/developers/apis/onlineApis).
 
 ## Usage
 

@@ -3,14 +3,20 @@ package linepay
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/google/go-querystring/query"
+	"github.com/google/uuid"
 )
 
 // API endpoint base constants
@@ -85,7 +91,7 @@ func WithSandbox() ClientOption {
 }
 
 // mergeQuery method
-func mergeQuery(endpoint string, q interface{}) (string, error) {
+func (c *Client) mergeQuery(endpoint string, q interface{}) (string, error) {
 	v := reflect.ValueOf(q)
 	if v.Kind() == reflect.Ptr && v.IsNil() {
 		return endpoint, nil
@@ -107,19 +113,44 @@ func mergeQuery(endpoint string, q interface{}) (string, error) {
 
 // NewRequest method
 func (c *Client) NewRequest(method, endpoint string, body interface{}) (*http.Request, error) {
+	if !strings.HasSuffix(c.endpointBase.Path, "/") {
+		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.endpointBase)
+	}
+	message := c.channelSecret + "/" + endpoint
+
+	switch method {
+	case http.MethodGet, http.MethodDelete:
+		if body != nil {
+			merged, err := c.mergeQuery(endpoint, body)
+			if err != nil {
+				return nil, err
+			}
+			endpoint = merged
+		}
+	}
 	u, err := c.endpointBase.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	var buf io.ReadWriter
-	if body != nil {
-		buf = new(bytes.Buffer)
-		err := json.NewEncoder(buf).Encode(body)
-		if err != nil {
-			return nil, err
+	switch method {
+	case http.MethodGet, http.MethodDelete:
+		if body != nil {
+			message += u.RawQuery
+		}
+	case http.MethodPost, http.MethodPut:
+		if body != nil {
+			buf = new(bytes.Buffer)
+			if err := json.NewEncoder(buf).Encode(body); err != nil {
+				return nil, err
+			}
+			message += strings.TrimSpace(buf.(*bytes.Buffer).String())
 		}
 	}
+
+	nounce := uuid.New().String()
+	message += nounce
 
 	req, err := http.NewRequest(method, u.String(), buf)
 	if err != nil {
@@ -127,7 +158,11 @@ func (c *Client) NewRequest(method, endpoint string, body interface{}) (*http.Re
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-LINE-ChannelId", c.channelID)
-	req.Header.Set("X-LINE-ChannelSecret", c.channelSecret)
+	req.Header.Set("X-LINE-Authorization-Nonce", nounce)
+
+	hash := hmac.New(sha256.New, []byte(c.channelSecret))
+	hash.Write([]byte(message))
+	req.Header.Set("X-LINE-Authorization", base64.StdEncoding.EncodeToString(hash.Sum(nil)))
 	return req, nil
 }
 
@@ -140,6 +175,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 			return nil, ctx.Err()
 		default:
 		}
+		return nil, err
 	}
 
 	defer resp.Body.Close()

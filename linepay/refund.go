@@ -8,11 +8,10 @@ import (
 )
 
 // Refund method
-// LINE Pay で決済された取引の払い戻しをリクエストします。
-// 払い戻しの際には、LINE Pay 会員の決済取引番号を必ず指定しなければなりません。
-// 一部払い戻しも可能です。払い戻し可能期間は売上(capture)から 30 日間となります。
+// 決済完了(売上確定済み)された取引を返金します。
+// 返金時は、LINE Payユーザーの決済取引番号を必ず渡す必要があります。一部返金も可能です。
 func (c *Client) Refund(ctx context.Context, transactionID int64, req *RefundRequest) (*RefundResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v2/payments/%d/refund", transactionID)
+	endpoint := fmt.Sprintf("v3/payments/%d/refund", transactionID)
 	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
 	if err != nil {
 		return nil, nil, err

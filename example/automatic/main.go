@@ -23,7 +23,6 @@ var (
 type PaymentTransactionSession struct {
 	TransactionID int64  `json:"transactionId"`
 	OrderID       string `json:"orderId"`
-	ProductName   string `json:"productName"`
 	Amount        int    `json:"amount"`
 	Currency      string `json:"currency"`
 }
@@ -47,21 +46,46 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/pay/reserve", func(w http.ResponseWriter, r *http.Request) {
-		reserveReq := &linepay.ReserveRequest{
-			ProductName: "advance demo product",
-			Amount:      1,
-			Currency:    "JPY",
-			ConfirmURL:  os.Getenv("LINE_PAY_CONFIRM_URL"),
-			OrderID:     uuid.New().String(),
-			PayType:     "PREAPPROVED",
+	http.HandleFunc("/pay/request", func(w http.ResponseWriter, r *http.Request) {
+		reserveReq := &linepay.RequestRequest{
+			Amount:   250,
+			Currency: "JPY",
+			OrderID:  uuid.New().String(),
+			Packages: []*linepay.RequestPackage{
+				&linepay.RequestPackage{
+					ID:     "1",
+					Amount: 250,
+					Name:   "PACKAGE_SHOP_1",
+					Products: []*linepay.RequestPackageProduct{
+						&linepay.RequestPackageProduct{
+							ID:       "PRIME-M-001",
+							Name:     "Prime MemberShip",
+							Quantity: 1,
+							Price:    250,
+						},
+					},
+				},
+			},
+			RedirectURLs: &linepay.RequestRedirectURLs{
+				ConfirmURL: os.Getenv("LINE_PAY_CONFIRM_URL"),
+				CancelURL:  os.Getenv("LINE_PAY_CANCEL_URL"),
+			},
+			Options: &linepay.RequestOptions{
+				Payment: &linepay.RequestOptionsPayment{
+					PayType: "PREAPPROVED",
+				},
+			},
 		}
-		reserveResp, _, err := pay.Reserve(context.Background(), reserveReq)
+		requestResp, _, err := pay.Request(context.Background(), reserveReq)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		transactionID := reserveResp.Info.TransactionID
+		if requestResp.ReturnCode != "0000" {
+			http.Error(w, requestResp.ReturnMessage, http.StatusInternalServerError)
+			return
+		}
+		transactionID := requestResp.Info.TransactionID
 		paymentSession, err := store.Get(r, "payment-transaction")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -70,7 +94,6 @@ func main() {
 		paymentSession.Values[transactionID] = &PaymentTransactionSession{
 			TransactionID: transactionID,
 			OrderID:       reserveReq.OrderID,
-			ProductName:   reserveReq.ProductName,
 			Amount:        reserveReq.Amount,
 			Currency:      reserveReq.Currency,
 		}
@@ -78,7 +101,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, reserveResp.Info.PaymentURL.Web, http.StatusFound)
+		http.Redirect(w, r, requestResp.Info.PaymentURL.Web, http.StatusFound)
 	})
 	http.HandleFunc("/pay/confirm", func(w http.ResponseWriter, r *http.Request) {
 		transactionID, err := linepay.ParseInt64(r.URL.Query().Get("transactionId"))
@@ -106,6 +129,10 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		if confirmResp.ReturnCode != "0000" {
+			http.Error(w, confirmResp.ReturnMessage, http.StatusInternalServerError)
+			return
+		}
 		paymentSession.Values["user"] = &UserSession{
 			RegKey: confirmResp.Info.RegKey,
 		}
@@ -129,12 +156,12 @@ func main() {
 			return
 		}
 		user := userVal.(*UserSession)
-		confirmResp, _, err := pay.ConfirmPreapprovedPay(
+		payPreapprovedResp, _, err := pay.PayPreapproved(
 			context.Background(),
 			user.RegKey,
-			&linepay.ConfirmPreapprovedPayRequest{
-				ProductName: "advance demo product",
-				Amount:      1,
+			&linepay.PayPreapprovedRequest{
+				ProductName: "Prime MemberShip",
+				Amount:      250,
 				Currency:    "JPY",
 				OrderID:     uuid.New().String(),
 			})
@@ -142,11 +169,15 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		if payPreapprovedResp.ReturnCode != "0000" {
+			http.Error(w, payPreapprovedResp.ReturnMessage, http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(confirmResp)
+		json.NewEncoder(w).Encode(payPreapprovedResp)
 	})
-	fmt.Println("open http://localhost:8080/pay/reserve")
+	fmt.Println("open http://localhost:8080/pay/request")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}

@@ -7,11 +7,11 @@ import (
 )
 
 // Confirm method
-// 加盟店が決済を最終的に完了させるための API です。加盟店で決済 confirm API を呼び出すことによって、
-// 実際の決済が完了し ます。決済 reserve 時に“capture”パラメータが“false”の場合、confirm API 実行時はオーソリ状態になるため、
-// 「capture API」実行時に決済完了となります。
+// confirmUrlまたはCheck Payment Status APIによってユーザーが決済要求を承認した後、加盟店側で決済を完了させるためのAPIです。
+// Request APIの"options.payment.capture"をfalseに設定するとオーソリと売上確定が分離された決済になり、決済を完了させても決済ステータスは売上確定待ち(オーソリ)状態のままとなります。
+// 売上を確定するには、Capture APIを呼び出して売上確定を行う必要があります。
 func (c *Client) Confirm(ctx context.Context, transactionID int64, req *ConfirmRequest) (*ConfirmResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v2/payments/%d/confirm", transactionID)
+	endpoint := fmt.Sprintf("v3/payments/%d/confirm", transactionID)
 	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
 	if err != nil {
 		return nil, nil, err
@@ -35,14 +35,13 @@ type ConfirmResponse struct {
 	ReturnCode    string `json:"returnCode"`
 	ReturnMessage string `json:"returnMessage"`
 	Info          struct {
-		OrderID       string `json:"orderId"`
-		TransactionID int64  `json:"transactionId"`
-		PayInfo       []struct {
-			Method             string `json:"method"`
-			Amount             int    `json:"amount"`
-			CreditCardNickname string `json:"creditCardNickname,omitempty"`
-			CreditCardBrand    string `json:"creditCardBrand,omitempty"`
+		OrderID                 string `json:"orderId"`
+		TransactionID           int64  `json:"transactionId"`
+		AuthorizationExpireDate string `json:"authorizationExpireDate,omitempty"`
+		RegKey                  string `json:"regKey,omitempty"`
+		PayInfo                 []struct {
+			Method string `json:"method"`
+			Amount int    `json:"amount"`
 		} `json:"payInfo"`
-		RegKey string `json:"regKey,omitempty"`
 	} `json:"info"`
 }
