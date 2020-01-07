@@ -26,7 +26,7 @@ func (c *Client) Refund(ctx context.Context, transactionID int64, req *RefundReq
 
 // RefundRequest type
 type RefundRequest struct {
-	RefundAmount int `json:"refundAmount"`
+	RefundAmount int `json:"refundAmount,omitempty"`
 }
 
 // RefundResponse type
