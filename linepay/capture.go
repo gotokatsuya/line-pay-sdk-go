@@ -10,8 +10,8 @@ import (
 // Request APIを使って決済をリクエストする際に"options.payment.capture"をfalseに設定した場合、Confirm APIで決済を完了させると決済ステータスは売上確定待ち状態になります。
 // 決済を完全に確定するためには、Capture APIを呼び出して売上確定を行う必要があります。
 func (c *Client) Capture(ctx context.Context, transactionID int64, req *CaptureRequest) (*CaptureResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v3/payments/authorizations/%d/capture", transactionID)
-	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
+	path := fmt.Sprintf("/v3/payments/authorizations/%d/capture", transactionID)
+	httpReq, err := c.NewRequest(http.MethodPost, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

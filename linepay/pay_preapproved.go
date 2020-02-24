@@ -11,8 +11,8 @@ import (
 // 決済 reserve API で決済タイプ(type)が PREAPPROVED で決済された場合、決済結果の受信時に regKey を受け取ります。
 // 継続決済 API は、この regKey を利用し LINE アプリを介さずに直接決済する際に使用します。
 func (c *Client) PayPreapproved(ctx context.Context, regKey string, req *PayPreapprovedRequest) (*PayPreapprovedResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v3/payments/preapprovedPay/%s/payment", regKey)
-	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
+	path := fmt.Sprintf("/v3/payments/preapprovedPay/%s/payment", regKey)
+	httpReq, err := c.NewRequest(http.MethodPost, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

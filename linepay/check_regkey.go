@@ -9,8 +9,8 @@ import (
 // CheckRegKey method
 // 継続決済 API を使用する前に、regKey が使用可能な状態であるかどうかを確認します。
 func (c *Client) CheckRegKey(ctx context.Context, regKey string, req *CheckRegKeyRequest) (*CheckRegKeyResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v3/payments/preapprovedPay/%s/check", regKey)
-	httpReq, err := c.NewRequest(http.MethodGet, endpoint, req)
+	path := fmt.Sprintf("/v3/payments/preapprovedPay/%s/check", regKey)
+	httpReq, err := c.NewRequest(http.MethodGet, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

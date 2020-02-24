@@ -9,8 +9,8 @@ import (
 // LINE Pay決済をリクエストします。このとき、ユーザーの注文情報と決済手段を設定できます。
 // リクエストに成功するとLINE Pay取引番号が発行されます。この取引番号を利用して、決済完了・返金を行うことができます。
 func (c *Client) Request(ctx context.Context, req *RequestRequest) (*RequestResponse, *http.Response, error) {
-	endpoint := "v3/payments/request"
-	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
+	path := "/v3/payments/request"
+	httpReq, err := c.NewRequest(http.MethodPost, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

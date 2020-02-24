@@ -12,15 +12,9 @@ import (
 )
 
 func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown func()) {
-	testEndpointBase := "/test-api-pay"
-
 	mux = http.NewServeMux()
-
-	apiHandler := http.NewServeMux()
-	apiHandler.Handle(testEndpointBase+"/", http.StripPrefix(testEndpointBase, mux))
-	server := httptest.NewServer(apiHandler)
-
-	client, err := New("testid", "testsecret", WithEndpointBase(server.URL+testEndpointBase+"/"))
+	server := httptest.NewServer(mux)
+	client, err := New("testid", "testsecret", WithEndpoint(server.URL))
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +24,7 @@ func setup() (client *Client, mux *http.ServeMux, serverURL string, teardown fun
 func TestNew(t *testing.T) {
 	id := "testid"
 	secret := "testsecret"
-	wantURL, _ := url.Parse(APIEndpointBaseReal)
+	wantURL, _ := url.Parse(APIEndpointReal)
 	client, err := New(id, secret)
 	if err != nil {
 		t.Fatal(err)
@@ -41,8 +35,8 @@ func TestNew(t *testing.T) {
 	if client.channelSecret != secret {
 		t.Errorf("channelSecret %s; want %s", client.channelSecret, secret)
 	}
-	if !reflect.DeepEqual(client.endpointBase, wantURL) {
-		t.Errorf("endpointBase %v; want %v", client.endpointBase, wantURL)
+	if !reflect.DeepEqual(client.endpoint, wantURL) {
+		t.Errorf("endpoint %v; want %v", client.endpoint, wantURL)
 	}
 	if client.httpClient != http.DefaultClient {
 		t.Errorf("httpClient %p; want %p", client.httpClient, http.DefaultClient)
@@ -59,13 +53,13 @@ func TestNewWithOptions(t *testing.T) {
 		id,
 		secret,
 		WithHTTPClient(&httpClient),
-		WithEndpointBase(endpoint),
+		WithEndpoint(endpoint),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(client.endpointBase, wantURL) {
-		t.Errorf("endpointBase %v; want %v", client.endpointBase, wantURL)
+	if !reflect.DeepEqual(client.endpoint, wantURL) {
+		t.Errorf("endpoint %v; want %v", client.endpoint, wantURL)
 	}
 	if client.httpClient != &httpClient {
 		t.Errorf("httpClient %p; want %p", client.httpClient, &httpClient)
@@ -101,9 +95,9 @@ func TestClient_NewRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	inURL, outURL := "foo", APIEndpointBaseReal+"foo"
+	inURL, outURL := "/foo", APIEndpointReal+"/foo"
 	inBody, outBody := &struct{ Login string }{"l"}, `{"Login":"l"}`+"\n"
-	req, _ := client.NewRequest("GET", inURL, inBody)
+	req, _ := client.NewRequest("POST", inURL, inBody)
 
 	// test that relative URL was expanded
 	if got, want := req.URL.String(), outURL; got != want {

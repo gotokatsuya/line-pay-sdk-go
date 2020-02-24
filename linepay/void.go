@@ -11,8 +11,8 @@ import (
 // Confirm APIを呼び出して決済完了したオーソリ状態の取引を取り消すことができます。
 // 取り消しできるのはオーソリ状態の取引だけであり、売上確定済みの取引はRefund APIを使用して返金します。
 func (c *Client) Void(ctx context.Context, transactionID int64, req *VoidRequest) (*VoidResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v3/payments/authorizations/%d/void", transactionID)
-	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
+	path := fmt.Sprintf("/v3/payments/authorizations/%d/void", transactionID)
+	httpReq, err := c.NewRequest(http.MethodPost, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

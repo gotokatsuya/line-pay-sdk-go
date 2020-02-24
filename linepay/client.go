@@ -8,12 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
-	"strings"
 
 	"github.com/google/go-querystring/query"
 	"github.com/google/uuid"
@@ -21,15 +19,15 @@ import (
 
 // API endpoint base constants
 const (
-	APIEndpointBaseReal    = "https://api-pay.line.me/"
-	APIEndpointBaseSandbox = "https://sandbox-api-pay.line.me/"
+	APIEndpointReal    = "https://api-pay.line.me"
+	APIEndpointSandbox = "https://sandbox-api-pay.line.me"
 )
 
 // Client type
 type Client struct {
 	channelID     string
 	channelSecret string
-	endpointBase  *url.URL
+	endpoint      *url.URL
 	httpClient    *http.Client
 }
 
@@ -55,12 +53,12 @@ func New(channelID, channelSecret string, options ...ClientOption) (*Client, err
 			return nil, err
 		}
 	}
-	if c.endpointBase == nil {
-		u, err := url.Parse(APIEndpointBaseReal)
+	if c.endpoint == nil {
+		u, err := url.Parse(APIEndpointReal)
 		if err != nil {
 			return nil, err
 		}
-		c.endpointBase = u
+		c.endpoint = u
 	}
 	return c, nil
 }
@@ -73,38 +71,38 @@ func WithHTTPClient(c *http.Client) ClientOption {
 	}
 }
 
-// WithEndpointBase function
-func WithEndpointBase(endpointBase string) ClientOption {
+// WithEndpoint function
+func WithEndpoint(endpoint string) ClientOption {
 	return func(client *Client) error {
-		u, err := url.Parse(endpointBase)
+		u, err := url.Parse(endpoint)
 		if err != nil {
 			return err
 		}
-		client.endpointBase = u
+		client.endpoint = u
 		return nil
 	}
 }
 
 // WithSandbox function
 func WithSandbox() ClientOption {
-	return WithEndpointBase(APIEndpointBaseSandbox)
+	return WithEndpoint(APIEndpointSandbox)
 }
 
 // mergeQuery method
-func (c *Client) mergeQuery(endpoint string, q interface{}) (string, error) {
+func (c *Client) mergeQuery(path string, q interface{}) (string, error) {
 	v := reflect.ValueOf(q)
 	if v.Kind() == reflect.Ptr && v.IsNil() {
-		return endpoint, nil
+		return path, nil
 	}
 
-	u, err := url.Parse(endpoint)
+	u, err := url.Parse(path)
 	if err != nil {
-		return endpoint, err
+		return path, err
 	}
 
 	qs, err := query.Values(q)
 	if err != nil {
-		return endpoint, err
+		return path, err
 	}
 
 	u.RawQuery = qs.Encode()
@@ -112,28 +110,25 @@ func (c *Client) mergeQuery(endpoint string, q interface{}) (string, error) {
 }
 
 // NewRequest method
-func (c *Client) NewRequest(method, endpoint string, body interface{}) (*http.Request, error) {
-	if !strings.HasSuffix(c.endpointBase.Path, "/") {
-		return nil, fmt.Errorf("BaseURL must have a trailing slash, but %q does not", c.endpointBase)
-	}
-	message := c.channelSecret + "/" + endpoint
+func (c *Client) NewRequest(method, path string, body interface{}) (*http.Request, error) {
+	message := c.channelSecret + path
 
 	switch method {
 	case http.MethodGet, http.MethodDelete:
 		if body != nil {
-			merged, err := c.mergeQuery(endpoint, body)
+			merged, err := c.mergeQuery(path, body)
 			if err != nil {
 				return nil, err
 			}
-			endpoint = merged
+			path = merged
 		}
 	}
-	u, err := c.endpointBase.Parse(endpoint)
+	u, err := c.endpoint.Parse(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var buf io.ReadWriter
+	var reqBody io.ReadWriter
 	switch method {
 	case http.MethodGet, http.MethodDelete:
 		if body != nil {
@@ -141,18 +136,19 @@ func (c *Client) NewRequest(method, endpoint string, body interface{}) (*http.Re
 		}
 	case http.MethodPost, http.MethodPut:
 		if body != nil {
-			buf = new(bytes.Buffer)
-			if err := json.NewEncoder(buf).Encode(body); err != nil {
+			b, err := json.Marshal(body)
+			if err != nil {
 				return nil, err
 			}
-			message += strings.TrimSpace(buf.(*bytes.Buffer).String())
+			reqBody = bytes.NewBuffer(b)
+			message += string(b)
 		}
 	}
 
 	nounce := uuid.New().String()
 	message += nounce
 
-	req, err := http.NewRequest(method, u.String(), buf)
+	req, err := http.NewRequest(method, u.String(), reqBody)
 	if err != nil {
 		return nil, err
 	}

@@ -11,8 +11,8 @@ import (
 // 決済完了(売上確定済み)された取引を返金します。
 // 返金時は、LINE Payユーザーの決済取引番号を必ず渡す必要があります。一部返金も可能です。
 func (c *Client) Refund(ctx context.Context, transactionID int64, req *RefundRequest) (*RefundResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v3/payments/%d/refund", transactionID)
-	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
+	path := fmt.Sprintf("/v3/payments/%d/refund", transactionID)
+	httpReq, err := c.NewRequest(http.MethodPost, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

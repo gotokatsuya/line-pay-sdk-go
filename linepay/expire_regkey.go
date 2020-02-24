@@ -10,8 +10,8 @@ import (
 // 継続決済で登録された regKey 情報を満了させる API です。
 // この API を呼び出した以降は、当該の regKey では継続決済することができなくなります。
 func (c *Client) ExpireRegKey(ctx context.Context, regKey string, req *ExpireRegKeyRequest) (*ExpireRegKeyResponse, *http.Response, error) {
-	endpoint := fmt.Sprintf("v3/payments/preapprovedPay/%s/expire", regKey)
-	httpReq, err := c.NewRequest(http.MethodPost, endpoint, req)
+	path := fmt.Sprintf("/v3/payments/preapprovedPay/%s/expire", regKey)
+	httpReq, err := c.NewRequest(http.MethodPost, path, req)
 	if err != nil {
 		return nil, nil, err
 	}

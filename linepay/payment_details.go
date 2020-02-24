@@ -10,8 +10,8 @@ import (
 // LINE Payの取引履歴を照会するAPIです。オーソリと売上確定の取引を照会できます。
 // "fields"を設定することで、取引情報または注文情報を選択的に照会することができます。
 func (c *Client) PaymentDetails(ctx context.Context, req *PaymentDetailsRequest) (*PaymentDetailsResponse, *http.Response, error) {
-	endpoint := "v3/payments"
-	httpReq, err := c.NewRequest(http.MethodGet, endpoint, req)
+	path := "/v3/payments"
+	httpReq, err := c.NewRequest(http.MethodGet, path, req)
 	if err != nil {
 		return nil, nil, err
 	}
