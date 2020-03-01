@@ -51,7 +51,7 @@ type RequestRedirectURLs struct {
 
 // RequestOptionsPayment type
 type RequestOptionsPayment struct {
-	Capture bool   `json:"capture,omitempty"`
+	Capture *bool  `json:"capture,omitempty"`
 	PayType string `json:"payType,omitempty"`
 }
 
