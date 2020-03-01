@@ -24,7 +24,7 @@ func (c *Client) CheckRegKey(ctx context.Context, regKey string, req *CheckRegKe
 
 // CheckRegKeyRequest type
 type CheckRegKeyRequest struct {
-	CreditCardAuth *bool `url:"creditCardAuth"`
+	CreditCardAuth *bool `url:"creditCardAuth,omitempty"`
 }
 
 // CheckRegKeyResponse type
